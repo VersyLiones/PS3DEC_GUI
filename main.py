@@ -31,11 +31,10 @@ async def download_keys():
         append_log(f"Errore: il file {html_file} non trovato.")
         time.sleep(3)
         for i in range(5, -1, -1):
-            if not i >= 2:
-                append_log(f"chiusura GUI tra: {i} secondo...")
-            else:
-                append_log(f"chiusura GUI tra: {i} secondi...")
+            append_log(f"chiusura GUI tra: {i} secondo..." if i == 1 else f"chiusura GUI tra: {i} secondi...")
             time.sleep(1)
+            if i == 1:
+                break
         root.destroy()
         return
 
