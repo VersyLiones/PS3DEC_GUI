@@ -1,3 +1,5 @@
+import asyncio
+import time
 import tkinter as tk
 from tkinter import messagebox
 import subprocess
@@ -8,9 +10,34 @@ import shutil
 from bs4 import BeautifulSoup
 
 
-def download_keys():
+async def download_keys():
     # Specifica il nome del file HTML
     html_file = 'keySite.html'
+
+    # Cartella contenente i file .iso
+    iso_folder = "ISOs"
+    # Cartella per le chiavi .dkey
+    keys_folder = "keys"
+
+    # Creazione delle cartelle se non esistono
+    if not os.path.exists(iso_folder):
+        os.makedirs(iso_folder)
+        append_log(f"La cartella '{iso_folder}' è stata creata.")
+    if not os.path.exists(keys_folder):
+        os.makedirs(keys_folder)
+        append_log(f"La cartella '{keys_folder}' è stata creata, download delle chiavi...")
+
+    if not os.path.exists(html_file):
+        append_log(f"Errore: il file {html_file} non trovato.")
+        time.sleep(3)
+        for i in range(5, -1, -1):
+            if not i >= 2:
+                append_log(f"chiusura GUI tra: {i} secondo...")
+            else:
+                append_log(f"chiusura GUI tra: {i} secondi...")
+            time.sleep(1)
+        root.destroy()
+        return
 
     # Leggi il contenuto del file HTML
     with open(html_file, 'r', encoding='utf-8') as file:
@@ -46,6 +73,7 @@ def download_keys():
             # Scrivi la dkey nel file
             with open(filename, 'w', encoding='utf-8') as key_file:
                 key_file.write(dkey)
+    append_log("Download delle chiavi completato.")
 
 def set_inputs_state(state):
     """Abilita o disabilita gli input e i bottoni."""
@@ -88,7 +116,7 @@ def run_command_in_thread(command, iso_path, decrypted_filename):
 
                 # Spostamento del file decriptato
                 try:
-                    shutil.move(decrypted_path, os.path.join(decrypted_folder, decrypted_filename))
+                    shutil.move(str(decrypted_path), os.path.join(decrypted_folder, decrypted_filename))
                     append_log(f"File decriptato spostato in: {decrypted_folder}")
                 except Exception as e:
                     append_log(f"Errore durante lo spostamento del file: {e}")
@@ -107,14 +135,6 @@ def start_command():
     iso_folder = "ISOs"
     # Cartella per le chiavi .dkey
     keys_folder = "keys"
-
-    # Creazione delle cartelle se non esistono
-    if not os.path.exists(iso_folder):
-        os.makedirs(iso_folder)
-        append_log(f"La cartella '{iso_folder}' è stata creata.")
-    if not os.path.exists(keys_folder):
-        os.makedirs(keys_folder)
-        append_log(f"La cartella '{keys_folder}' è stata creata.")
 
     iso_files = [f for f in os.listdir(iso_folder) if f.endswith(".iso")]
 
@@ -151,6 +171,12 @@ def start_command():
         set_inputs_state(tk.DISABLED)  # Disabilita gli input durante l'esecuzione del comando
         Thread(target=run_command_in_thread, args=(command, iso_path, decrypted_filename), daemon=True).start()
 
+async def run_after_gui():
+    await asyncio.sleep(0.1)
+    await download_keys()
+
+def start_asyncio_loop():
+    asyncio.run(run_after_gui())
 
 # Creazione della finestra principale
 root = tk.Tk()
@@ -168,5 +194,7 @@ show_log_console()
 start_button = tk.Button(root, text="Inizia", command=start_command, bg="green", fg="white")
 start_button.grid(row=2, column=0, columnspan=3, pady=20)
 
-download_keys()
+thread = Thread(target=start_asyncio_loop, daemon=True)
+thread.start()
+
 root.mainloop()
